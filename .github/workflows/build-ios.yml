@@ -1,0 +1,67 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS dependencies
+        run: npm install --legacy-peer-deps
+        working-directory: my-app
+
+      - name: Expo prebuild (generate iOS project)
+        run: npx expo prebuild --platform ios --no-install
+        working-directory: my-app
+
+      - name: Install CocoaPods gem
+        run: sudo gem install cocoapods --no-document
+
+      - name: Pod install
+        working-directory: my-app/ios
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: pod install
+
+      - name: Archive (unsigned)
+        working-directory: my-app/ios
+        run: |
+          xcodebuild archive \
+            -workspace myapp.xcworkspace \
+            -scheme myapp \
+            -archivePath /tmp/myapp.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            2>&1 | grep -E "error:|warning:|BUILD |Archive|Compiling|note:" | tail -30
+
+      - name: Package as IPA
+        run: |
+          APP=$(find /tmp/myapp.xcarchive/Products -name "*.app" | head -1)
+          echo "App found: $APP"
+          mkdir -p /tmp/Payload
+          cp -r "$APP" /tmp/Payload/
+          cd /tmp && zip -r myapp.ipa Payload
+          ls -lh /tmp/myapp.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: habit-tracker-unsigned
+          path: /tmp/myapp.ipa
+          retention-days: 7
