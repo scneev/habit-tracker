@@ -1,8 +1,12 @@
 import { registerRootComponent } from 'expo';
-
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
+// Catch any unhandled JS promise rejections in production so they show as
+// the ErrorBoundary "RENDER ERROR" screen instead of silently killing the app.
+const handler = (ErrorUtils as any).getGlobalHandler?.();
+(ErrorUtils as any).setGlobalHandler?.((error: Error, isFatal: boolean) => {
+  console.error('[global]', error?.message, error?.stack);
+  if (handler) handler(error, isFatal);
+});
+
 registerRootComponent(App);

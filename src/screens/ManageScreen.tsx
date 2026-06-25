@@ -96,8 +96,8 @@ export default function ManageScreen() {
               onReminderChange={(time) => {
                 const updated = { ...habit, reminderTime: time || undefined };
                 dispatch({ type: 'EDIT_HABIT', payload: updated });
-                if (time) scheduleHabitReminder(habit.id, habit.name, time);
-                else cancelHabitReminder(habit.id);
+                if (time) scheduleHabitReminder(habit.id, habit.name, time).catch(() => {});
+                else cancelHabitReminder(habit.id).catch(() => {});
               }}
             />
           ))

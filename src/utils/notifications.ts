@@ -5,8 +5,12 @@ let _Notifications: typeof import('expo-notifications') | null = null;
 
 async function N() {
   if (!isNative) return null;
-  if (!_Notifications) _Notifications = await import('expo-notifications');
-  return _Notifications;
+  try {
+    if (!_Notifications) _Notifications = await import('expo-notifications');
+    return _Notifications;
+  } catch {
+    return null;
+  }
 }
 
 export async function setupHandler() {

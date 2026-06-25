@@ -25,7 +25,7 @@ export default function OnboardingScreen() {
   const { dispatch } = useAppStore();
   const [step, setStep] = useState(0);
 
-  useEffect(() => { setupHandler(); }, []);
+  useEffect(() => { setupHandler().catch(() => {}); }, []);
   const [selected, setSelected] = useState<string[]>([]);
   const [custom, setCustom] = useState('');
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -87,8 +87,10 @@ export default function OnboardingScreen() {
     }
 
     if (enableNotifs) {
-      const granted = await requestPermissions();
-      if (granted) await scheduleDailyReminders();
+      try {
+        const granted = await requestPermissions();
+        if (granted) await scheduleDailyReminders();
+      } catch {}
     }
 
     dispatch({ type: 'ONBOARD' });
