@@ -16,6 +16,11 @@ jobs:
       - name: Select Xcode 16.2
         run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
+      - name: Generate grey minimalistic icon
+        run: |
+          convert -size 1024x1024 xc:'#1C1C1E' assets/icon.png
+          echo "Icon generated"
+
       - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
@@ -37,24 +42,27 @@ jobs:
           LC_ALL: en_US.UTF-8
         run: pod install
 
-      - name: Archive (unsigned)
+      - name: Archive with ad-hoc signing
         working-directory: ios
         run: |
           xcodebuild archive \
             -workspace myapp.xcworkspace \
             -scheme myapp \
+            -configuration Release \
             -archivePath /tmp/myapp.xcarchive \
             -destination "generic/platform=iOS" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             DEVELOPMENT_TEAM="" \
-            2>&1 | grep -E "error:|BUILD |Archive" | tail -20
+            2>&1 | tail -30
 
-      - name: Package as IPA
+      - name: Verify archive and package as IPA
         run: |
           APP=$(find /tmp/myapp.xcarchive/Products -name "*.app" | head -1)
           echo "App: $APP"
+          echo "App size: $(du -sh "$APP" | cut -f1)"
+          ls "$APP/Frameworks" 2>/dev/null | head -5 || echo "WARNING: No Frameworks dir found"
           mkdir -p /tmp/Payload
           cp -r "$APP" /tmp/Payload/
           cd /tmp && zip -r myapp.ipa Payload
