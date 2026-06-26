@@ -85,14 +85,18 @@ export default function ManageScreen() {
         {habits.length === 0 ? (
           <Text style={[styles.empty, { color: c.dim, fontFamily: MONO }]}>No habits yet. Tap + on Today screen.</Text>
         ) : (
-          habits.map((habit) => (
+          habits.map((habit, index) => (
             <HabitManageRow
               key={habit.id}
               habit={habit}
+              index={index}
+              total={habits.length}
               streak={calculateStreak(habit, logs)}
               colors={c}
               onEdit={() => nav.navigate('AddHabit', { habitId: habit.id })}
               onDelete={() => dispatch({ type: 'DELETE_HABIT', payload: habit.id })}
+              onMoveUp={() => dispatch({ type: 'REORDER_HABIT', payload: { from: index, to: index - 1 } })}
+              onMoveDown={() => dispatch({ type: 'REORDER_HABIT', payload: { from: index, to: index + 1 } })}
               onReminderChange={(time) => {
                 const updated = { ...habit, reminderTime: time || undefined };
                 dispatch({ type: 'EDIT_HABIT', payload: updated });
@@ -236,13 +240,17 @@ export default function ManageScreen() {
 }
 
 function HabitManageRow({
-  habit, streak, colors: c, onEdit, onDelete, onReminderChange,
+  habit, index, total, streak, colors: c, onEdit, onDelete, onMoveUp, onMoveDown, onReminderChange,
 }: {
   habit: Habit;
+  index: number;
+  total: number;
   streak: number;
   colors: ReturnType<typeof getColors>;
   onEdit: () => void;
   onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onReminderChange: (time: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -266,6 +274,24 @@ function HabitManageRow({
             {habit.type === 'volume' ? `×${habit.volumeGoal} per day` : 'Once per day'}
             {streak > 0 ? `  ·  ${streak} day streak` : ''}
           </Text>
+        </View>
+        <View style={styles.reorderBtns}>
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation(); lightTap(); onMoveUp(); }}
+            disabled={index === 0}
+            style={[styles.reorderBtn, { opacity: index === 0 ? 0.2 : 1 }]}
+            hitSlop={{ top: 8, bottom: 4, left: 8, right: 8 }}
+          >
+            <Text style={[styles.reorderTxt, { color: c.muted }]}>↑</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation(); lightTap(); onMoveDown(); }}
+            disabled={index === total - 1}
+            style={[styles.reorderBtn, { opacity: index === total - 1 ? 0.2 : 1 }]}
+            hitSlop={{ top: 4, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.reorderTxt, { color: c.muted }]}>↓</Text>
+          </TouchableOpacity>
         </View>
         <Text style={[styles.expandIcon, { color: c.dim }]}>{expanded ? '▲' : '▼'}</Text>
       </TouchableOpacity>
@@ -292,8 +318,8 @@ function HabitManageRow({
             </Text>
           ) : null}
           <View style={styles.actionRow}>
-            <TouchableOpacity style={[styles.editBtn, { backgroundColor: c.surface2 }]} onPress={onEdit}>
-              <Text style={[styles.editBtnTxt, { color: c.text, fontFamily: MONO }]}>EDIT</Text>
+            <TouchableOpacity style={[styles.editBtn, { backgroundColor: c.accent }]} onPress={onEdit}>
+              <Text style={[styles.editBtnTxt, { color: '#fff', fontFamily: MONO }]}>✏ EDIT</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: c.accentBg }]} onPress={onDelete}>
               <Text style={[styles.deleteBtnTxt, { color: c.accent, fontFamily: MONO }]}>DELETE</Text>
@@ -342,6 +368,9 @@ const styles = StyleSheet.create({
   habitName: { fontSize: 12, letterSpacing: 1.5 },
   habitSub: { fontSize: 9, marginTop: 4, letterSpacing: 1.5 },
   expandIcon: { fontSize: 10 },
+  reorderBtns: { flexDirection: 'column', gap: 2, marginRight: 8 },
+  reorderBtn: { padding: 2 },
+  reorderTxt: { fontSize: 16, lineHeight: 18, fontWeight: '700' },
   expandedSection: { borderTopWidth: 1, padding: 16, gap: 12 },
   reminderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reminderLabel: { fontSize: 10, letterSpacing: 2 },

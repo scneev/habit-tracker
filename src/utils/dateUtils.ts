@@ -1,5 +1,28 @@
+import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
+
 export function today(): string {
   return formatDate(new Date());
+}
+
+export function useCurrentDate(): string {
+  const [date, setDate] = useState(today);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') setDate(today());
+    });
+
+    // Fire 1 second after midnight to flip the date
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const ms = midnight.getTime() - now.getTime() + 1000;
+    const timer = setTimeout(() => setDate(today()), ms);
+
+    return () => { sub.remove(); clearTimeout(timer); };
+  }, []);
+
+  return date;
 }
 
 export function formatDate(d: Date): string {

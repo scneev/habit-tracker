@@ -10,7 +10,8 @@ import {
 } from '../store/AppContext';
 import HabitCard from '../components/HabitCard';
 import { AnimBar } from '../components/AnimBar';
-import { today, friendlyDate } from '../utils/dateUtils';
+import { friendlyDate, useCurrentDate } from '../utils/dateUtils';
+import CelebrationOverlay from '../components/CelebrationOverlay';
 import { getColors } from '../utils/theme';
 import { MONO, NUMS } from '../utils/fonts';
 import { TODAY_TASKS } from '../data/plannerData';
@@ -47,10 +48,12 @@ function animStyle(anim: Animated.Value, dy = 18) {
   };
 }
 
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 60, 100];
+
 export default function HomeScreen() {
   const { state, dispatch } = useAppStore();
   const nav = useNavigation<any>();
-  const t = today();
+  const t = useCurrentDate();
   const c = getColors(state.isDark);
   const { habits, logs, challenge, savings, savingsGoal, currency, wakeLog, notes, goals, financeSetup } = state;
   const completed = habits.filter((h) => isCompletedOn(logs, h, t)).length;
@@ -61,6 +64,8 @@ export default function HomeScreen() {
   const [draftNote, setDraftNote] = useState('');
   const [showArchive, setShowArchive] = useState(false);
   const [actionsExpanded, setActionsExpanded] = useState(false);
+  const [celebration, setCelebration] = useState<{ type: 'allDone' | 'streak'; streak?: number; habitName?: string } | null>(null);
+  const prevCompleted = useRef(completed);
 
   const todayChecked = state.planTodayChecked[t] ?? [];
 
@@ -97,7 +102,24 @@ export default function HomeScreen() {
   }, [cp.allDone]);
 
   function handleSetCount(habitId: string, count: number) {
+    const habit = habits.find((h) => h.id === habitId);
+    const wasCompleted = habit ? isCompletedOn(logs, habit, t) : false;
+    const willComplete = habit ? count >= habit.volumeGoal : false;
+
     dispatch({ type: 'SET_COUNT', payload: { habitId, date: t, count } });
+
+    if (!wasCompleted && willComplete && habit) {
+      // Compute new streak (optimistically include today)
+      const patchedLogs = [...logs.filter((l) => !(l.habitId === habitId && l.date === t)), { habitId, date: t, count }];
+      const newStreak = calculateStreak(habit, patchedLogs);
+      const allWillBeDone = habits.every((h) => h.id === habitId ? willComplete : isCompletedOn(logs, h, t));
+
+      if (allWillBeDone && habits.length > 0) {
+        setTimeout(() => setCelebration({ type: 'allDone' }), 300);
+      } else if (STREAK_MILESTONES.includes(newStreak)) {
+        setTimeout(() => setCelebration({ type: 'streak', streak: newStreak, habitName: habit.name }), 300);
+      }
+    }
   }
 
   function openNote() {
@@ -392,6 +414,15 @@ export default function HomeScreen() {
       <TouchableOpacity style={[styles.fab, { backgroundColor: c.accent }]} onPress={() => nav.navigate('AddHabit')}>
         <Text style={styles.fabTxt}>+</Text>
       </TouchableOpacity>
+
+      {celebration && (
+        <CelebrationOverlay
+          type={celebration.type}
+          streak={celebration.streak}
+          habitName={celebration.habitName}
+          onDone={() => setCelebration(null)}
+        />
+      )}
     </View>
   );
 }

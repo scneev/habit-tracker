@@ -35,7 +35,8 @@ type Action =
   | { type: 'PLAN_SET_APARTMENT'; payload: number }
   | { type: 'PLAN_SET_CAR'; payload: number }
   | { type: 'PLAN_TODAY_TOGGLE'; payload: { date: string; id: string } }
-  | { type: 'PLAN_WEEKLY_TOGGLE'; payload: { weekKey: string; id: string } };
+  | { type: 'PLAN_WEEKLY_TOGGLE'; payload: { weekKey: string; id: string } }
+  | { type: 'REORDER_HABIT'; payload: { from: number; to: number } };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -145,6 +146,13 @@ function reducer(state: AppState, action: Action): AppState {
       const existing = state.planWeeklyChecked[weekKey] ?? [];
       const next = existing.includes(id) ? existing.filter((x) => x !== id) : [...existing, id];
       return { ...state, planWeeklyChecked: { ...state.planWeeklyChecked, [weekKey]: next } };
+    }
+    case 'REORDER_HABIT': {
+      const { from, to } = action.payload;
+      const arr = [...state.habits];
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      return { ...state, habits: arr };
     }
     default:
       return state;
