@@ -285,8 +285,13 @@ export default function HomeScreen() {
                 habit={habit}
                 log={getLogForDate(logs, habit.id, t)}
                 streak={calculateStreak(habit, logs)}
+                isFirst={idx === 0}
+                isLast={idx === habits.length - 1}
                 onSetCount={(count) => handleSetCount(habit.id, count)}
                 onDelete={() => dispatch({ type: 'DELETE_HABIT', payload: habit.id })}
+                onEdit={() => nav.navigate('AddHabit', { habitId: habit.id })}
+                onMoveUp={() => dispatch({ type: 'REORDER_HABIT', payload: { from: idx, to: idx - 1 } })}
+                onMoveDown={() => dispatch({ type: 'REORDER_HABIT', payload: { from: idx, to: idx + 1 } })}
                 colors={c}
               />
             </Animated.View>

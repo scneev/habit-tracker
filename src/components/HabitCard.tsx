@@ -8,16 +8,25 @@ interface Props {
   habit: Habit;
   log?: HabitLog;
   streak: number;
+  isFirst: boolean;
+  isLast: boolean;
   onSetCount: (count: number) => void;
   onDelete: () => void;
+  onEdit: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   colors: Colors;
 }
 
-export default function HabitCard({ habit, log, streak, onSetCount, onDelete, colors: c }: Props) {
+export default function HabitCard({
+  habit, log, streak, isFirst, isLast,
+  onSetCount, onDelete, onEdit, onMoveUp, onMoveDown,
+  colors: c,
+}: Props) {
   const count = log?.count ?? 0;
   const done = count >= habit.volumeGoal;
   const pct = habit.type === 'volume' ? Math.min(1, count / Math.max(1, habit.volumeGoal)) : done ? 1 : 0;
-  const [showDelete, setShowDelete] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const scale = useRef(new Animated.Value(1)).current;
 
   function bounce() {
@@ -28,6 +37,7 @@ export default function HabitCard({ habit, log, streak, onSetCount, onDelete, co
   }
 
   function tapCard() {
+    if (showMenu) { setShowMenu(false); return; }
     if (habit.type === 'volume') return;
     bounce();
     onSetCount(done ? 0 : 1);
@@ -43,8 +53,8 @@ export default function HabitCard({ habit, log, streak, onSetCount, onDelete, co
   return (
     <Pressable
       onPress={tapCard}
-      onLongPress={() => setShowDelete((v) => !v)}
-      delayLongPress={500}
+      onLongPress={() => setShowMenu((v) => !v)}
+      delayLongPress={400}
       style={{ marginBottom: 8 }}
     >
       <Animated.View style={[styles.card, { backgroundColor: cardBg, transform: [{ scale }] }]}>
@@ -110,14 +120,36 @@ export default function HabitCard({ habit, log, streak, onSetCount, onDelete, co
           </View>
         )}
 
-        {showDelete && (
-          <TouchableOpacity
-            style={[styles.deleteArea, { borderRadius: 28 }]}
-            onPress={() => { onDelete(); setShowDelete(false); }}
-          >
-            <Text style={styles.deleteTxt}>HOLD TO{'\n'}DELETE</Text>
-            <Text style={[styles.deleteTxt, { fontSize: 22, marginTop: 4 }]}>×</Text>
-          </TouchableOpacity>
+        {/* Long-press action menu */}
+        {showMenu && (
+          <View style={[styles.menuOverlay, { borderRadius: 28 }]}>
+            <TouchableOpacity
+              style={[styles.menuBtn, { backgroundColor: 'rgba(255,255,255,0.15)', opacity: isFirst ? 0.3 : 1 }]}
+              onPress={() => { if (!isFirst) { onMoveUp(); setShowMenu(false); } }}
+              disabled={isFirst}
+            >
+              <Text style={styles.menuBtnTxt}>↑</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuBtn, { backgroundColor: 'rgba(255,255,255,0.15)', opacity: isLast ? 0.3 : 1 }]}
+              onPress={() => { if (!isLast) { onMoveDown(); setShowMenu(false); } }}
+              disabled={isLast}
+            >
+              <Text style={styles.menuBtnTxt}>↓</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+              onPress={() => { onEdit(); setShowMenu(false); }}
+            >
+              <Text style={styles.menuBtnTxt}>✏</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.menuBtn, { backgroundColor: '#CC0000' }]}
+              onPress={() => { onDelete(); setShowMenu(false); }}
+            >
+              <Text style={styles.menuBtnTxt}>✕</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </Animated.View>
     </Pressable>
@@ -159,11 +191,17 @@ const styles = StyleSheet.create({
   },
   checkTxt: { fontSize: 18, fontWeight: '300' },
 
-  deleteArea: {
+  menuOverlay: {
     position: 'absolute', top: 0, right: 0, bottom: 0,
-    width: 90, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#CC0000',
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 10,
+    gap: 8,
   },
-  deleteTxt: { color: '#FFFFFF', fontSize: 9, fontWeight: '700', letterSpacing: 1, textAlign: 'center' },
+  menuBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  menuBtnTxt: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
 });
